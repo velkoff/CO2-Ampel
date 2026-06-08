@@ -29,9 +29,9 @@
 
 #define VERSION "26"
 
-#define COVID      0 //1 = COVID CO2 values
-#define WIFI_AMPEL 0 //1 = Version with WiFi/WLAN
-#define PRO_AMPEL  0 //1 = Pro version with pressure sensor
+#define COVID      1 //1 = COVID CO2 values
+#define WIFI_AMPEL 1 //1 = Version with WiFi/WLAN
+#define PRO_AMPEL  1 //1 = Pro version with pressure sensor
 
 //--- CO2 values ---
 #if COVID
