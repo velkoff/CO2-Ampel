@@ -71,7 +71,7 @@
 #define INTERVAL           2 //2-1800s measurement interval (SCD30 only, SCD4X always 5s)
 #define AMPEL_AVERAGE      1 //1 = use CO2 average for ampel
 #define AUTO_CALIBRATION   0 //1 = automatic calibration (ASC) on (requires 7 days of continuous operation with 1h of fresh air per day)
-#define BUZZER             1 //enable buzzer
+#define BUZZER             0 //CO2 threshold alarm buzzer (0 = no alarm beep; menu/calibration beeps unaffected)
 #define BUZZER_DELAY     300 //300s, buzzer startup delay
 #define TEMP_OFFSET        4 //Temperature offset in deg C (0-20)
 #define TEMP_OFFSET_WIFI   8 //WiFi, temperature offset in deg C (0-20)
@@ -2075,6 +2075,7 @@ void ampel(unsigned int co2)
   }
 
   //buzzer
+#if BUZZER
   if(co2 < settings.range[4])
   {
     buzzer(0); //buzzer off
@@ -2090,6 +2091,7 @@ void ampel(unsigned int co2)
       buzzer(0); //buzzer off
     }
   }
+#endif
 
   return;
 }
