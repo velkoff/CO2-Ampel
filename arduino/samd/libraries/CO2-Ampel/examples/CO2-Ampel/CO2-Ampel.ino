@@ -2131,10 +2131,18 @@ void loop()
     }
     else if((millis()-t_switch) > 100) //100ms button press
     {
-      settings.brightness = settings.brightness/2; //halve brightness
-      if(settings.brightness < BRIGHTNESS_DARK)
+      //cycle: BRIGHTNESS -> /2 -> /4 -> ... -> off -> BRIGHTNESS
+      if(settings.brightness == 0)
       {
         settings.brightness = BRIGHTNESS;
+      }
+      else
+      {
+        settings.brightness = settings.brightness/2; //halve brightness
+        if(settings.brightness < BRIGHTNESS_DARK)
+        {
+          settings.brightness = 0; //next press will restore BRIGHTNESS
+        }
       }
       ws2812.setBrightness(settings.brightness);
       overwrite = 1;
