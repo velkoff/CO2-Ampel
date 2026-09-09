@@ -73,6 +73,7 @@
 #define AUTO_CALIBRATION   0 //1 = automatic calibration (ASC) on (requires 7 days of continuous operation with 1h of fresh air per day)
 #define BUZZER             0 //CO2 threshold alarm buzzer (0 = no alarm beep; menu/calibration beeps unaffected)
 #define BUZZER_DELAY     300 //300s, buzzer startup delay
+#define STARTUP_MELODY     1 //1 = play startup tune; this is independent of CO2 the alarm buzzer
 #define TEMP_OFFSET        4 //Temperature offset in deg C (0-20)
 #define TEMP_OFFSET_WIFI   8 //WiFi, temperature offset in deg C (0-20)
 #define TEMP_OFFSET_PRO    6 //Pro WiFi, temperature offset in deg C (0-20)
@@ -154,6 +155,12 @@ unsigned int features=0, remote_on=0, buzzer_timer=BUZZER_DELAY;
 unsigned int co2_value=START_VALUE, co2_average=START_VALUE, light_value=1024;
 float temp_value=20, temp_offset=TEMP_OFFSET, humi_value=50, pres_value=1013, pres_last=1013, temp2_value=20;
 
+bool startup_melody_active=false;
+#if STARTUP_MELODY
+unsigned long startup_melody_started=0;
+unsigned int startup_melody_step=~0u;
+#endif
+
 
 void leds(uint32_t color)
 {
@@ -185,8 +192,77 @@ void status_led(unsigned int on)
 }
 
 
+void startup_melody_stop(void)
+{
+#if STARTUP_MELODY
+  if(startup_melody_active)
+  {
+    noTone(PIN_BUZZER);
+    startup_melody_active = false;
+    startup_melody_step = ~0u;
+  }
+#endif
+}
+
+
+void startup_melody_service(void)
+{
+#if STARTUP_MELODY
+  //Fallout 4 main-theme piano motif.
+  const struct { unsigned int frequency, duration; } notes[] = {
+    {523, 160}, //C5
+    {622, 320}, //Eb5
+    {659, 800}, //E5
+    {523, 160}, //C5
+    {622, 320}, //Eb5
+    {659, 640}, //E5
+  };
+  if(!startup_melody_active)
+  {
+    return;
+  }
+
+  unsigned long elapsed = millis()-startup_melody_started;
+  const unsigned int note_count = sizeof(notes)/sizeof(notes[0]);
+  unsigned int note = 0;
+  unsigned long note_end = notes[0].duration;
+  while(elapsed >= note_end)
+  {
+    if(++note == note_count)
+    {
+      startup_melody_stop();
+      return;
+    }
+    note_end += notes[note].duration;
+  }
+
+  if(note+1 < note_count)
+  {
+    note_end -= 20;
+  }
+  unsigned int frequency = (elapsed < note_end) ? notes[note].frequency : 0;
+  unsigned int step = note*2 + (frequency ? 0 : 1);
+  if(step != startup_melody_step)
+  {
+    if(frequency)
+    {
+      pinMode(PIN_BUZZER, OUTPUT); //restore GPIO after any PWM menu/calibration beep
+      tone(PIN_BUZZER, frequency, note_end-elapsed);
+    }
+    else
+    {
+      noTone(PIN_BUZZER);
+    }
+    startup_melody_step = step;
+  }
+#endif
+}
+
+
 void buzzer(unsigned int on)
 {
+  startup_melody_stop(); //existing buzzer actions take priority over the tune
+
   if(on == 0)
   {
     analogWrite(PIN_BUZZER, 0); //buzzer off
@@ -2032,6 +2108,15 @@ void setup()
     co2_value = co2_average = START_RED;
   }
 
+  #if STARTUP_MELODY
+    if(!run_menu)
+    {
+      startup_melody_started = millis();
+      startup_melody_active = true;
+      startup_melody_service();
+    }
+  #endif
+
   return;
 }
 
@@ -2078,7 +2163,10 @@ void ampel(unsigned int co2)
 #if BUZZER
   if(co2 < settings.range[4])
   {
-    buzzer(0); //buzzer off
+    if(!startup_melody_active)
+    {
+      buzzer(0); //buzzer off
+    }
   }
   else
   {
@@ -2088,7 +2176,10 @@ void ampel(unsigned int co2)
     }
     else
     {
-      buzzer(0); //buzzer off
+      if(!startup_melody_active)
+      {
+        buzzer(0); //buzzer off
+      }
     }
   }
 #endif
@@ -2102,6 +2193,8 @@ void loop()
   static unsigned int dark=0, sw=0;
   static unsigned long t_switch=0, t_ampel=0, t_light=~((LIGHT_INTERVAL*1000UL*60UL)-60000UL); //check light sensor after 60s
   unsigned int overwrite=0;
+
+  startup_melody_service();
 
   //process serial commands
   serial_service();
