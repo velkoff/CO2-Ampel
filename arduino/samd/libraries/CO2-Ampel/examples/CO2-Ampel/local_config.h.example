@@ -1,0 +1,28 @@
+/*
+  Local settings for CO2-Ampel.ino
+
+  Copy this file to local_config.h (same folder, gitignored) and uncomment what you need.
+  Everything not defined here uses the default from CO2-Ampel.ino.
+*/
+
+//--- WiFi/WLAN ---
+//#define WIFI_SSID          "" //WiFi SSID
+//#define WIFI_CODE          "" //WiFi password
+//#define WIFI_NM            255,255,255,  0 //Netmask
+//#define WIFI_IP              0,  0,  0,  0 //Local IP address, 0=DHCP
+//#define WIFI_GW            192,168,  1,  1 //Gateway IP address
+//#define WIFI_DNS           192,168,  1,  1 //DNS IP address
+
+//--- Ampel brightness (LEDs) ---
+//#define BRIGHTNESS         180 //1-255 (255=100%, 179=70%)
+//#define BRIGHTNESS_DARK    20  //1-255 (255=100%, 25=10%)
+//#define BRIGHTNESS_START   22  //1-255, brightness after settings reset (22 = lowest step of the button cycle)
+
+//--- General ---
+//#define FRESH_AIR_PPM    425 //Ambient outdoor CO2 in ppm, reference for calibration
+//#define ALTITUDE         675 //Altitude above sea level in m (1-3000), 0 = keep sensor value
+//#define BUZZER             0 //CO2 threshold alarm buzzer
+//#define STARTUP_MELODY     0 //1 = play startup tune
+//#define TEMP_OFFSET        4 //Temperature offset in deg C (0-20)
+//#define TEMP_OFFSET_WIFI   8 //WiFi, temperature offset in deg C (0-20)
+//#define TEMP_OFFSET_PRO    6 //Pro WiFi, temperature offset in deg C (0-20)

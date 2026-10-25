@@ -30,6 +30,11 @@
 
 #define VERSION "26"
 
+//Local settings (WiFi login etc.); see local_config.h. for example
+#if __has_include("local_config.h")
+  #include "local_config.h"
+#endif
+
 #define COVID      1 //1 = COVID CO2 values
 #define WIFI_AMPEL 1 //1 = Version with WiFi/WLAN
 #define PRO_AMPEL  1 //1 = Pro version with pressure sensor
@@ -52,16 +57,35 @@
 #endif
 
 //--- WiFi/WLAN ---
-#define WIFI_SSID          "" //WiFi SSID
-#define WIFI_CODE          "" //WiFi password
-#define WIFI_NM            255,255,255,  0 //Netmask
-#define WIFI_IP              0,  0,  0,  0 //Local IP address, 0=DHCP
-#define WIFI_GW            192,168,  1,100 //Gateway IP address
-#define WIFI_DNS           192,168,  1,100 //DNS IP address
+#ifndef WIFI_SSID
+  #define WIFI_SSID          "" //WiFi SSID
+#endif
+#ifndef WIFI_CODE
+  #define WIFI_CODE          "" //WiFi password
+#endif
+#ifndef WIFI_NM
+  #define WIFI_NM            255,255,255,  0 //Netmask
+#endif
+#ifndef WIFI_IP
+  #define WIFI_IP              0,  0,  0,  0 //Local IP address, 0=DHCP
+#endif
+#ifndef WIFI_GW
+  #define WIFI_GW            192,168,  1,100 //Gateway IP address
+#endif
+#ifndef WIFI_DNS
+  #define WIFI_DNS           192,168,  1,100 //DNS IP address
+#endif
 
 //--- Ampel brightness (LEDs) ---
-#define BRIGHTNESS         180 //1-255 (255=100%, 179=70%)
-#define BRIGHTNESS_DARK    20  //1-255 (255=100%, 25=10%)
+#ifndef BRIGHTNESS
+  #define BRIGHTNESS         180 //1-255 (255=100%, 179=70%)
+#endif
+#ifndef BRIGHTNESS_DARK
+  #define BRIGHTNESS_DARK    20  //1-255 (255=100%, 25=10%)
+#endif
+#ifndef BRIGHTNESS_START
+  #define BRIGHTNESS_START   BRIGHTNESS //1-255, brightness after settings reset
+#endif
 #define NUM_LEDS           4   //Number of LEDs
 
 //--- Light sensor ---
@@ -72,13 +96,28 @@
 #define INTERVAL           2 //2-1800s measurement interval (SCD30 only, SCD4X always 5s)
 #define AMPEL_AVERAGE      1 //1 = use CO2 average for ampel
 #define AUTO_CALIBRATION   0 //1 = automatic calibration (ASC) on (requires 7 days of continuous operation with 1h of fresh air per day)
-#define FRESH_AIR_PPM    425 //Ambient outdoor CO2 , see the manual re: calibration
-#define BUZZER             0 //CO2 threshold alarm buzzer (0 = no alarm beep; menu/calibration beeps unaffected)
+#ifndef FRESH_AIR_PPM
+  #define FRESH_AIR_PPM    425 //Ambient outdoor CO2 , see the manual re: calibration
+#endif
+#ifndef ALTITUDE
+  #define ALTITUDE           0 //Altitude above sea level in m (1-3000), set on sensor at startup (0 = keep sensor value)
+#endif
+#ifndef BUZZER
+  #define BUZZER             0 //CO2 threshold alarm buzzer (0 = no alarm beep; menu/calibration beeps unaffected)
+#endif
 #define BUZZER_DELAY     300 //300s, buzzer startup delay
-#define STARTUP_MELODY     1 //1 = play startup tune; this is independent of CO2 the alarm buzzer
-#define TEMP_OFFSET        4 //Temperature offset in deg C (0-20)
-#define TEMP_OFFSET_WIFI   8 //WiFi, temperature offset in deg C (0-20)
-#define TEMP_OFFSET_PRO    6 //Pro WiFi, temperature offset in deg C (0-20)
+#ifndef STARTUP_MELODY
+  #define STARTUP_MELODY     1 //1 = play startup tune; this is independent of CO2 the alarm buzzer
+#endif
+#ifndef TEMP_OFFSET
+  #define TEMP_OFFSET        4 //Temperature offset in deg C (0-20)
+#endif
+#ifndef TEMP_OFFSET_WIFI
+  #define TEMP_OFFSET_WIFI   8 //WiFi, temperature offset in deg C (0-20)
+#endif
+#ifndef TEMP_OFFSET_PRO
+  #define TEMP_OFFSET_PRO    6 //Pro WiFi, temperature offset in deg C (0-20)
+#endif
 #define PRESSURE_DIFF      5 //Pressure difference in hPa (5-20)
 #define BAUDRATE           9600 //9600 Baud
 #define START_VALUE        500 //500ppm, initial CO2 value
@@ -1967,11 +2006,30 @@ void setup()
     temp_offset = TEMP_OFFSET;
   }
 
+  //altitude
+#if ALTITUDE > 0
+  if(features & FEATURE_SCD30)
+  {
+    if(scd30.getAltitudeCompensation() != ALTITUDE) //stored in sensor, write only on change
+    {
+      scd30.setAltitudeCompensation(ALTITUDE); //meters above sea level
+    }
+  }
+  else if(features & FEATURE_SCD4X)
+  {
+    scd4x.stopPeriodicMeasurement();
+    delay(500);
+    scd4x.setSensorAltitude(ALTITUDE); //meters above sea level (not persisted, set on every start)
+    delay(500);
+    scd4x.startPeriodicMeasurement();
+  }
+#endif
+
   //settings
   settings = flash_settings.read(); //read settings
   if((settings.valid == false) || (settings.brightness > 255) || (settings.range[0] < 100))
   {
-    settings.brightness   = BRIGHTNESS;
+    settings.brightness   = BRIGHTNESS_START;
     settings.range[0]     = START_GREEN;
     settings.range[1]     = START_YELLOW;
     settings.range[2]     = START_RED;
@@ -2039,6 +2097,10 @@ void setup()
     if(features & FEATURE_WINC1500) { Serial.print(" WINC1500"); }
     if(features & FEATURE_SSD1306)  { Serial.print(" SSD1306"); }
     Serial.println("\n");
+    if(features & FEATURE_SCD30)
+    {
+      Serial.print("Altitude: "); Serial.println(scd30.getAltitudeCompensation(), DEC);
+    }
   }
 
   //service menu
