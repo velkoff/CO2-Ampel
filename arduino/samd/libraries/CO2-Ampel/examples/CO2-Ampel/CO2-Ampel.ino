@@ -19,7 +19,8 @@
     T?       - Query temperature offset
     A=X      - Altitude above sea level (0-3000)
     A?       - Query altitude
-    C=1      - Calibration to 400ppm (requires at least 2min running on fresh air before command)
+    C=1      - Calibration to fresh air, FRESH_AIR_PPM (requires at least 2min running on fresh air before command)
+    C=X      - Calibration to X ppm (400-2000)
     1=X      - Range 1 start (400-10000) - green
     2=X      - Range 2 start (400-10000) - yellow
     3=X      - Range 3 start (400-10000) - red
@@ -71,6 +72,7 @@
 #define INTERVAL           2 //2-1800s measurement interval (SCD30 only, SCD4X always 5s)
 #define AMPEL_AVERAGE      1 //1 = use CO2 average for ampel
 #define AUTO_CALIBRATION   0 //1 = automatic calibration (ASC) on (requires 7 days of continuous operation with 1h of fresh air per day)
+#define FRESH_AIR_PPM    425 //Ambient outdoor CO2 , see the manual re: calibration
 #define BUZZER             0 //CO2 threshold alarm buzzer (0 = no alarm beep; menu/calibration beeps unaffected)
 #define BUZZER_DELAY     300 //300s, buzzer startup delay
 #define STARTUP_MELODY     1 //1 = play startup tune; this is independent of CO2 the alarm buzzer
@@ -632,11 +634,11 @@ void serial_service(void)
         {
           tmp[i] = 0;
           sscanf(tmp, "%d", &val);
-          if((val > 0) && (val < 400))
+          if((val > 0) && (val < 400)) //C=1
           {
-            val = 400;
+            val = FRESH_AIR_PPM;
           }
-          if((val >= 400) || (val <= 2000))
+          if((val >= 400) && (val <= 2000))
           {
             calibration_done = 1;
             if(features & FEATURE_SCD30)
@@ -1621,7 +1623,7 @@ void calibration(void) //calibration
   {
     if(features & FEATURE_SCD30)
     {
-      scd30.setForcedRecalibrationFactor(400); //400ppm = fresh air
+      scd30.setForcedRecalibrationFactor(FRESH_AIR_PPM); //fresh air
       delay(500);
     }
     else if(features & FEATURE_SCD4X)
@@ -1629,7 +1631,7 @@ void calibration(void) //calibration
       uint16_t corr;
       scd4x.stopPeriodicMeasurement();
       delay(1000);
-      scd4x.performForcedRecalibration(400, corr); //400ppm = fresh air
+      scd4x.performForcedRecalibration(FRESH_AIR_PPM, corr); //fresh air
       delay(1000);
       scd4x.startPeriodicMeasurement();
     }
